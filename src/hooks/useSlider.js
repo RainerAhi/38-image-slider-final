@@ -6,7 +6,7 @@ export const useSlider = create((set) => ({
   items: [
     {
       image:
-        "textures/optimized/Default_authentic_futuristic_cottage_with_garden_outside_0.jpg",
+        "dwbusiness.png",
       short: "PH",
       title: "Relax",
       description: "Enjoy your peace of mind.",

@@ -13,7 +13,7 @@ function App() {
           <p className="text-white">section 1</p>
         </section>
         <section className="w-full h-screen relative two">
-          <Slider />
+          {/* <Slider /> */}
           <Canvas
             camera={{ position: [0, 0, 5], fov: 30 }}
             className="top-0 left-0"
@@ -24,7 +24,6 @@ function App() {
               position: "absolute",
             }}
           >
-            <AnimatedBackground />
             <ImageSlider />
           </Canvas>
         </section>

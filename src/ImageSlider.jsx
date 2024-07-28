@@ -1,7 +1,7 @@
 import { shaderMaterial, useTexture } from "@react-three/drei";
 import { extend, useFrame, useThree } from "@react-three/fiber";
 import { useSpring } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { MirroredRepeatWrapping } from "three";
 import { MathUtils } from "three/src/math/MathUtils.js";
 import { useSlider } from "./hooks/useSlider";
@@ -10,7 +10,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 gsap.registerPlugin(ScrollTrigger);
 
-const PUSH_FORCE = 1.4;
+const PUSH_FORCE = 0.5;
 
 const ImageSliderMaterial = shaderMaterial(
   {
@@ -29,7 +29,7 @@ const ImageSliderMaterial = shaderMaterial(
     uniform vec2 uMousePosition;
     void main() {
       vUv = uv;
-      vec2 centeredUv = (vUv - 0.5) * 2.0;
+      vec2 centeredUv = (vUv - 0.5) * vec2(-2.0, -2.0);
       float pushed = length(centeredUv - uMousePosition);
       pushed = 1.0 - smoothstep(0.0, 1.5, pushed);
       pushed = -uPushForce * pushed;
@@ -89,7 +89,7 @@ const ImageSliderMaterial = shaderMaterial(
     vec4 finalTexture = mix(prevTexture, curTexture, uProgression);
 
     vec2 centeredUv = (vUv - 0.5) * 2.0;
-    float frame = sdRoundedBox(centeredUv, vec2(1.0), vec4(0.2, 0.0, 0.0, 0.2));
+    float frame = sdRoundedBox(centeredUv, vec2(1.0), vec4(0.2, 0.2, 0.2, 0.2));
     frame = smoothstep(0.0, 0.002, -frame);
     finalTexture.a *= frame;
     gl_FragColor = finalTexture;
@@ -102,7 +102,7 @@ extend({
   ImageSliderMaterial,
 });
 
-export const ImageSlider = ({ width = 3, height = 4, fillPercent = 0.75 }) => {
+export const ImageSlider = ({ width = 3, height = 2, fillPercent = 0.5 }) => {
   const { items, curSlide, direction } = useSlider();
   const image = items[curSlide].image;
   const texture = useTexture(image);
@@ -115,12 +115,14 @@ export const ImageSlider = ({ width = 3, height = 4, fillPercent = 0.75 }) => {
     prevTexture.wrapT =
       MirroredRepeatWrapping;
   const material = useRef();
-  const [transition, setTransition] = useState(false);
+  const [transition, setTransition] = useState(true);
   const progression = useSpring(0, {
     stiffness: 1500,
     damping: 250,
     mass: 2,
   });
+
+  const imageMesh = useRef()
 
   // useEffect(() => {
   //   const newImage = image;
@@ -143,9 +145,8 @@ export const ImageSlider = ({ width = 3, height = 4, fillPercent = 0.75 }) => {
     const trigger = ScrollTrigger.create({
       trigger: ".two",
       start: "top bottom",
-      end: "bottom bottom", 
+      end: "90% bottom", 
       scrub: 1,
-      markers: true,
       onUpdate: (self) => {
         progression.set(self.progress); 
       },
@@ -154,6 +155,34 @@ export const ImageSlider = ({ width = 3, height = 4, fillPercent = 0.75 }) => {
     return () => {
       trigger.kill();
     };
+  }, []);
+
+  const tl = gsap.timeline();
+  let mm = gsap.matchMedia();
+
+  useLayoutEffect(() => {
+    mm.add({
+      isDesktop: "(min-width: 800px)",
+      isMobile: "(max-width: 799px)"
+    }, (context) => {
+      let { isMobile, isDesktop } = context.conditions;
+
+      tl
+
+      .to(imageMesh.current.scale, {
+        x: 1.6,
+        z: 1.6,
+        y: 1.6,
+        scrollTrigger: {
+          trigger: ".two",
+          start: "top bottom",
+          end: "bottom top",
+          scrub: true,
+          immediateRender: false,
+        },
+      })
+
+    });
   }, []);
 
   const hovered = useRef(false);
@@ -169,7 +198,7 @@ export const ImageSlider = ({ width = 3, height = 4, fillPercent = 0.75 }) => {
       ),
       MathUtils.lerp(
         material.current.uMousePosition[1],
-        transition ? -1.0 * material.current.uProgression : mouse.y,
+        transition ? -1.0 * material.current.uProgression : -mouse.y,
         0.05
       ),
     ];
@@ -179,7 +208,7 @@ export const ImageSlider = ({ width = 3, height = 4, fillPercent = 0.75 }) => {
     material.current.uPushForce = MathUtils.lerp(
       material.current.uPushForce,
       transition
-        ? -PUSH_FORCE * 1.52 * Math.sin(material.current.uProgression * 3.14)
+        ? -PUSH_FORCE * 3 * Math.sin(material.current.uProgression * 3.14)
         : hovered.current
         ? PUSH_FORCE
         : 0,
@@ -197,8 +226,10 @@ export const ImageSlider = ({ width = 3, height = 4, fillPercent = 0.75 }) => {
     <mesh
       onPointerEnter={() => (hovered.current = true)}
       onPointerLeave={() => (hovered.current = false)}
+      scale={ [ 1, 1, 1 ] }
+      ref={imageMesh}
     >
-      <planeGeometry args={[width * ratio, height * ratio, 32, 32]} />
+      <planeGeometry args={[1.75, 1.25, 32, 32]} />
       <imageSliderMaterial
         ref={material}
         uTexture={texture}
